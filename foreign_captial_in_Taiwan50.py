@@ -11,6 +11,14 @@ import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 
+# 輸出圖檔若有中文字串，顯示中文字串之設定
+
+font = {'family' : 'DFKai-SB',
+'weight' : 'bold',
+'size' : '12' }
+plt.rc('font', **font)
+plt.rc('axes',unicode_minus=False)
+
 # 應用網路爬蟲，比對台灣50成分股 與 外資買超排名前100股票，取交集製作新list
 
 def foreign_investor_list():
@@ -32,49 +40,92 @@ def foreign_investor_list():
     html_2 = requests.get(url_2)
     html_2_text = BeautifulSoup(html_2.text, "html5lib")
     html_2_data = html_2_text.find_all("div",{"class":{"D(f) Ai(c)"}})
-    foreign_100 = []
+    foreign_100_buy = []
     for symble in html_2_data:
         stock = symble.text
-        foreign_100.append(stock)
-    for not_stock in foreign_100:
+        foreign_100_buy.append(stock)
+    for not_stock in foreign_100_buy:
         if len(not_stock)!= 7:
-            foreign_100.remove(not_stock)
-
-    # 將 台灣50代號list 與 外資100代號list，取交集，做成供查詢 的 目標list
-    # list 取交集:intersection；取聯集:union；取差集:difference
-    foreign_investor = list(set(foreign_100).intersection(set(taiwan_50)))
+            foreign_100_buy.remove(not_stock)
     
-    return foreign_investor
+    # 網路爬蟲，取得外資賣超排名前100股票代號，做成list
+    url_3 = "https://tw.stock.yahoo.com/rank/foreign-investor-sell"
+    html_3 = requests.get(url_3)
+    html_3_text = BeautifulSoup(html_3.text, "html5lib")
+    html_3_data = html_3_text.find_all("div",{"class":{"D(f) Ai(c)"}})
+    foreign_100_sell = []
+    for point in html_3_data:
+        sell_dot = point.text
+        foreign_100_sell.append(sell_dot)
+    for not_sell_dot in foreign_100_sell:
+        if len(not_sell_dot)!=7:
+            foreign_100_sell.remove(not_sell_dot)
+
+    # 將 台灣50代號list 與 外資100買超代號list，取交集，做成供查詢 的 台灣50買超排名list，台灣50賣超排名list作法同前。
+    # list 取交集:intersection；取聯集:union；取差集:difference
+    foreign_investor_buy = list(set(foreign_100_buy).intersection(set(taiwan_50)))
+    foreign_investor_sell = list(set(foreign_100_sell).intersection(set(taiwan_50)))
+    
+    return (foreign_investor_buy, foreign_investor_sell)
 
 # 將預備好的 foreign_investor list 整理出股票資料DataFrame 以及最後折線圖呈現。
-
-def stock_info(foreign_investor):
-    stock = yf.Ticker(foreign_investor)
+# 買超股票價格圖輸出
+def stock_info_buy(foreign_investor_buy):
+    stock = yf.Ticker(foreign_investor_buy)
     stock_data = stock.history(period="1y", interval="1d")
-    stock_name = stock.info
-    stock_pd = pd.DataFrame(stock_data)
+    stock_buy_name = stock.info
+    stock_buy_pd = pd.DataFrame(stock_data)
     
-    sma = stock_pd["Close"].rolling(5).mean()
-    lma = stock_pd["Close"].rolling(20).mean()
+    sma = stock_buy_pd["Close"].rolling(5).mean()
+    lma = stock_buy_pd["Close"].rolling(20).mean()
 
-    stock_pd["SMA"] = sma
-    stock_pd["LMA"] = lma
+    stock_buy_pd["SMA"] = sma
+    stock_buy_pd["LMA"] = lma
 
-    plt.plot(stock_pd.Close, color = "navy", label="Close Price")
-    plt.plot(stock_pd.SMA, color="red", label="SMA")
-    plt.plot(stock_pd.LMA, color ="orange", label="LMA")
-    plt.title(stock_name["shortName"]+" Curve")
+    plt.plot(stock_buy_pd.Close, color = "navy", label="Close Price")
+    plt.plot(stock_buy_pd.SMA, color="red", label="SMA")
+    plt.plot(stock_buy_pd.LMA, color ="orange", label="LMA")
+    plt.title(stock_buy_name["shortName"]+"買超排名價格圖")
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend(loc="best")
     plt.grid()
     plt.show() 
 
-# 依本程式目標，呼叫台灣50股票中，外資買超前3高者，股票折線圖呈現。
+# 賣超股票價格圖輸出
+def stock_info_sell(foreign_investor_sell):
+    stock = yf.Ticker(foreign_investor_sell)
+    stock_data = stock.history(period="1y", interval="1d")
+    stock_sell_name = stock.info
+    stock_sell_pd = pd.DataFrame(stock_data)
+    
+    sma = stock_sell_pd["Close"].rolling(5).mean()
+    lma = stock_sell_pd["Close"].rolling(20).mean()
+
+    stock_sell_pd["SMA"] = sma
+    stock_sell_pd["LMA"] = lma
+
+    plt.plot(stock_sell_pd.Close, color = "navy", label="Close Price")
+    plt.plot(stock_sell_pd.SMA, color="red", label="SMA")
+    plt.plot(stock_sell_pd.LMA, color ="orange", label="LMA")
+    plt.title(stock_sell_name["shortName"]+"賣超排名價格圖")
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.legend(loc="best")
+    plt.grid()
+    plt.show()
+
+# 依本程式目標，呼叫台灣50股票中，外資買/賣超前3高者，股票折線圖呈現。
 
 if __name__ == "__main__":
     foreign_investor = foreign_investor_list()
-    foreign_investor = foreign_investor[:3]
-    for elem in foreign_investor:
-        stock_info(elem)
+    foreign_investor_buy = foreign_investor[0]
+    foreign_investor_buy=  foreign_investor_buy[:3]
+    foreign_investor_sell = foreign_investor[1]
+    foreign_investor_sell = foreign_investor_sell[:3]
+    for buy_elem in foreign_investor_buy:
+        stock_info_buy(buy_elem)
+    for sell_elem in foreign_investor_sell:
+        stock_info_sell(sell_elem)
       
+
