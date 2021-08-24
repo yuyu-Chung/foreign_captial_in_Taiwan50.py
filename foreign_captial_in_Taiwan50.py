@@ -11,7 +11,7 @@ import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 
-# 輸出圖檔若有中文字串，顯示中文字串之設定
+# matplotlib圖檔若有中文字串，顯示中文字串之設定
 
 font = {'family' : 'DFKai-SB',
 'weight' : 'bold',
@@ -66,7 +66,7 @@ def foreign_investor_list():
     foreign_investor_buy = list(set(foreign_100_buy).intersection(set(taiwan_50)))
     foreign_investor_sell = list(set(foreign_100_sell).intersection(set(taiwan_50)))
     
-    return (foreign_investor_buy, foreign_investor_sell)
+    return {"foreign_investor_buy":foreign_investor_buy, "foreign_investor_sell":foreign_investor_sell}
 
 # 將預備好的 foreign_investor list 整理出股票資料DataFrame 以及最後折線圖呈現。
 # 買超股票價格圖輸出
@@ -119,13 +119,16 @@ def stock_info_sell(foreign_investor_sell):
 
 if __name__ == "__main__":
     foreign_investor = foreign_investor_list()
-    foreign_investor_buy = foreign_investor[0]
+    foreign_investor_buy = foreign_investor["foreign_investor_buy"]
     foreign_investor_buy=  foreign_investor_buy[:3]
-    foreign_investor_sell = foreign_investor[1]
+    foreign_investor_sell = foreign_investor["foreign_investor_sell"]
     foreign_investor_sell = foreign_investor_sell[:3]
     for buy_elem in foreign_investor_buy:
         stock_info_buy(buy_elem)
     for sell_elem in foreign_investor_sell:
         stock_info_sell(sell_elem)
       
+
+
+    
 
