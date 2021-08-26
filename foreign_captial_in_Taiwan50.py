@@ -1,7 +1,7 @@
-# 本程式檔目標為找出台灣50股票中，每日外資買超前三名之股票，列入選股參考。
-# 本程式檔使用方式 : 已預設跑出台灣50中外資買超前3名的股票，可重新設定希望呈現之前幾名股票，如 foreign_investor = foreign_investor[:5]
+# 本程式檔目標為找出台灣50股票中，每日外資買/賣超前三名之股票，列入選股參考。
+# 本程式檔使用方式 : 已預設跑出台灣50中外資買/賣超前3名的股票，可重新設定希望呈現之前幾名股票，如 foreign_investor_buy = foreign_investor_buy[:5]
 # 本程式檔如何驗證 : 可對照輸出之台灣50與每日外資買超前100名股票代號取交集的list，是否與台灣50股票及每日外資買超排名前100名單交叉比對一致。
-#                   以及最後輸出之折線圖，其公司是否包含於 交集list、網路台灣50名單、網路每日外資買超排名名單內。(參考爬蟲網頁。)
+#                   以及最後輸出之折線圖，其公司是否包含於 交集list、網路台灣50名單、網路每日外資買/賣超排名名單內。(參考爬蟲網頁。)
 
 # 先載入將使用之第三方套件包，requests、BeautifulSoup、pandas、yfinance、matplotlib，若無下載皆須先行下載(pip install (requests、BeautifulSoup、pandas、yfinance、matplotlib))
 
@@ -19,11 +19,9 @@ font = {'family' : 'DFKai-SB',
 plt.rc('font', **font)
 plt.rc('axes',unicode_minus=False)
 
-# 應用網路爬蟲，比對台灣50成分股 與 外資買超排名前100股票，取交集製作新list
 
-def foreign_investor_list():
-
-    # 網路爬蟲，取得台灣50成分股代號，做成list
+# 網路爬蟲，取得台灣50成分股代號，做成list
+def Taiwan_50():
     url_1 = "https://histock.tw/twclass/A901"
     html_1 = requests.get(url_1)
     html_1_text = BeautifulSoup(html_1.text, "html5lib")
@@ -35,7 +33,11 @@ def foreign_investor_list():
         taiwan_50.append(list_2)
     del taiwan_50[0]
 
-    # 網路爬蟲，取得外資買超排名前100股票代號，做成list
+    return taiwan_50
+
+
+# 網路爬蟲，取得外資買超排名前100股票代號，做成list
+def foreign_captial_buy():    
     url_2 = "https://tw.stock.yahoo.com/rank/foreign-investor-buy/"
     html_2 = requests.get(url_2)
     html_2_text = BeautifulSoup(html_2.text, "html5lib")
@@ -48,7 +50,11 @@ def foreign_investor_list():
         if len(not_stock)!= 7:
             foreign_100_buy.remove(not_stock)
     
-    # 網路爬蟲，取得外資賣超排名前100股票代號，做成list
+    return foreign_100_buy
+
+
+# 網路爬蟲，取得外資賣超排名前100股票代號，做成list
+def foreign_captial_sell():    
     url_3 = "https://tw.stock.yahoo.com/rank/foreign-investor-sell"
     html_3 = requests.get(url_3)
     html_3_text = BeautifulSoup(html_3.text, "html5lib")
@@ -60,9 +66,13 @@ def foreign_investor_list():
     for not_sell_dot in foreign_100_sell:
         if len(not_sell_dot)!=7:
             foreign_100_sell.remove(not_sell_dot)
+    
+    return foreign_100_sell
 
-    # 將 台灣50代號list 與 外資100買超代號list，取交集，做成供查詢 的 台灣50買超排名list，台灣50賣超排名list作法同前。
-    # list 取交集:intersection；取聯集:union；取差集:difference
+
+# 將 台灣50代號list 與 外資100買/賣超代號list，取交集，做成供查詢 的 台灣50買/賣超排名list。
+# list 取交集:intersection；取聯集:union；取差集:difference
+def foreign_investor_list(foreign_100_buy, foreign_100_sell,taiwan_50):
     foreign_investor_buy = list(set(foreign_100_buy).intersection(set(taiwan_50)))
     foreign_investor_sell = list(set(foreign_100_sell).intersection(set(taiwan_50)))
     
@@ -85,7 +95,7 @@ def stock_info_buy(foreign_investor_buy):
     plt.plot(stock_buy_pd.Close, color = "navy", label="Close Price")
     plt.plot(stock_buy_pd.SMA, color="red", label="SMA")
     plt.plot(stock_buy_pd.LMA, color ="orange", label="LMA")
-    plt.title(stock_buy_name["shortName"]+"買超排名價格圖")
+    plt.title(stock_buy_name["shortName"]+"買超績優股")
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend(loc="best")
@@ -108,7 +118,7 @@ def stock_info_sell(foreign_investor_sell):
     plt.plot(stock_sell_pd.Close, color = "navy", label="Close Price")
     plt.plot(stock_sell_pd.SMA, color="red", label="SMA")
     plt.plot(stock_sell_pd.LMA, color ="orange", label="LMA")
-    plt.title(stock_sell_name["shortName"]+"賣超排名價格圖")
+    plt.title(stock_sell_name["shortName"]+"賣超績優股")
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend(loc="best")
@@ -118,17 +128,19 @@ def stock_info_sell(foreign_investor_sell):
 # 依本程式目標，呼叫台灣50股票中，外資買/賣超前3高者，股票折線圖呈現。
 
 if __name__ == "__main__":
-    foreign_investor = foreign_investor_list()
-    foreign_investor_buy = foreign_investor["foreign_investor_buy"]
+    taiwan_50 = Taiwan_50()
+    foreign_100_buy = foreign_captial_buy()
+    foreign_100_sell = foreign_captial_sell()
+    final_list = foreign_investor_list(foreign_100_buy, foreign_100_sell, taiwan_50)
+    foreign_investor_buy = final_list["foreign_investor_buy"]
     foreign_investor_buy=  foreign_investor_buy[:3]
-    foreign_investor_sell = foreign_investor["foreign_investor_sell"]
+    foreign_investor_sell = final_list["foreign_investor_sell"]
     foreign_investor_sell = foreign_investor_sell[:3]
     for buy_elem in foreign_investor_buy:
         stock_info_buy(buy_elem)
     for sell_elem in foreign_investor_sell:
         stock_info_sell(sell_elem)
       
-
 
     
 
